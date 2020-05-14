@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+        <!-- Required meta tags always come first -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="node_modules/bootstrap/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="node_modules/font-awesome/css/font-awesome.min.css">
+    <link rel="stylesheet" type="text/css" href="css/styles.css">
+    <title>Ristorante Con Fusion</title>
+</head>
+
+<body>
+<h1></h1>
+<form >
+<button onclick="playSound()" disabled>Start</button>
+<button onclick="stopSound()" disabled>Stop</button>
+    <input type="text" name="question" placeholder="question text"/>
+    <input type="text" name="option1" placeholder="option1"/>
+    <input type="text" name="option2" placeholder="option2"/>
+    <input type="text" name="option3" placeholder="option3"/>
+    <input type="text" name="option4" placeholder="option4"/>
+    <input type="text" name="correctanswer" placeholder="correctanswer"/>
+    <input type="file" name="audio"  accept="audio/*"/>
+    <textarea id="encodedResult" cols="100" rows="10">
+    </textarea>
+    <input type="submit" value="submit"/>
+
+</form>
+  
+    <!-- jQuery first, then Popper.js, then Bootstrap JS. -->
+    <script src="https://audiocliptest.s3.ap-south-1.amazonaws.com/jquery.js"></script>
+    <script>
+        $(document).ready(
+            function(){
+                    $("form").submit(function(e){
+                        console.log("Prevent submission");
+                                e.preventDefault();
+                                var API_GATEWAY_URL="https://f7ftxcbp6h.execute-api.ap-south-1.amazonaws.com/prod/upload";
+            var payload={};
+            payload.question=$('input[name="question"]').val();
+            payload.audioclip=$('#encodedResult').val();
+            payload.option1=$('input[name="option1"]').val();
+            payload.option2=$('input[name="option2"]').val();
+            payload.option3=$('input[name="option3"]').val();
+            payload.option4=$('input[name="option4"]').val();
+            payload.correctanswer=$('input[name="correctanswer"]').val();
+            console.log(payload);
+            console.log(API_GATEWAY_URL);
+       //     $.post( API_GATEWAY_URL,payload)
+ // .done(function( data ) {
+  //  console.log( "Data Loaded: " + data );
+  //});
+  $.ajax({
+                url:API_GATEWAY_URL ,
+                dataType: 'json',
+                type: 'post',
+                contentType: 'application/json',
+                data: payload,
+                success: function( data, textStatus, jQxhr ){
+                    console.log(data);
+                },
+                error: function( jqXhr, textStatus, errorThrown ){
+                    console.log( errorThrown );
+                }
+            });
+                    })
+            }
+        );
+        
+        var context = new AudioContext();
+var source = null;
+var audioBuffer = null;
+// Converts an ArrayBuffer to base64, by converting to string 
+// and then using window.btoa' to base64. 
+var bufferToBase64 = function (buffer) {
+    var bytes = new Uint8Array(buffer);
+    var len = buffer.byteLength;
+    var binary = "";
+    for (var i = 0; i < len; i++) {
+        binary += String.fromCharCode(bytes[i]);
+    }
+    return window.btoa(binary);
+};
+var base64ToBuffer = function (buffer) {
+    var binary = window.atob(buffer);
+    var buffer = new ArrayBuffer(binary.length);
+    var bytes = new Uint8Array(buffer);
+    for (var i = 0; i < buffer.byteLength; i++) {
+        bytes[i] = binary.charCodeAt(i) & 0xFF;
+    }
+    return buffer;
+};
+function stopSound() {
+    if (source) {
+        source.stop(0);
+    }
+}
+function playSound() {
+    // source is global so we can call .stop() later.
+    source = context.createBufferSource();
+    source.buffer = audioBuffer;
+    source.loop = false;
+    source.connect(context.destination);
+    source.start(0); // Play immediately.
+}
+function initSound(arrayBuffer) {
+    var base64String = bufferToBase64(arrayBuffer);
+    var audioFromString = base64ToBuffer(base64String);
+    document.getElementById("encodedResult").value=base64String;
+    context.decodeAudioData(audioFromString, function (buffer) {
+        // audioBuffer is global to reuse the decoded audio later.
+        audioBuffer = buffer;
+        var buttons = document.querySelectorAll('button');
+        buttons[0].disabled = false;
+        buttons[1].disabled = false;
+    }, function (e) {
+        console.log('Error decoding file', e);
+    });
+}
+// User selects file, read it as an ArrayBuffer and pass to the API.
+var fileInput = document.querySelector('input[type="file"]');
+fileInput.addEventListener('change', function (e) {
+    var reader = new FileReader();
+    reader.onload = function (e) {
+        initSound(this.result);
+    };
+    reader.readAsArrayBuffer(this.files[0]);
+}, false);
+// Load file from a URL as an ArrayBuffer.
+// Example: loading via xhr2: loadSoundFile('sounds/test.mp3');
+function loadSoundFile(url) {
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', url, true);
+    xhr.responseType = 'arraybuffer';
+    xhr.onload = function (e) {
+        initSound(this.response); // this.response is an ArrayBuffer.
+    };
+    xhr.send();
+}
+    </script>
+
+    <script src="node_modules/bootstrap/dist/js/bootstrap.min.js"></script>
+
+   
+</body>
+
+</html>
